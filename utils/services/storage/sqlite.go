@@ -84,7 +84,7 @@ func (s *SQLite) Close() error {
 	return nil
 }
 
-//File related services
+//-------------------------------FILE RELATED SERVICES-------------------------------------
 
 // UploadFileMetadata uploads file metadata to the SQLite database
 func (s *SQLite) UploadFileMetadata(fileMetaData types.FileMetadata) error {
@@ -162,3 +162,79 @@ func (s *SQLite) DeleteFileMetadata(filename string) error {
 	slog.Info("File metadata deleted successfully", "id", filename)
 	return nil
 }
+
+//--------------------------------FILE RELATED SERVICES END-------------------------------------
+
+//-------------------------------------LOG RELATED SERVICES-------------------------------------
+
+// Create Log Entry creates a log entry in the SQLite database
+func (s *SQLite) CreateLogEntry(log types.LogEntry) error {
+	result, err := s.DB.Prepare(`INSERT INTO logs (message, type, action, client_name) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		slog.Error("Failed to prepare log entry statement", "error", err)
+		return err
+	}
+
+	_, err = result.Exec(log.Message, log.Type, log.Action, log.ClientName)
+	if err != nil {
+		slog.Error("Failed to execute log entry statement", "error", err)
+		return err
+	}
+	slog.Info("Log entry created successfully", "message", log.Message, "at", log.Timestamp)
+	return nil
+}
+
+// Get Log Entries retrieves log entries from the SQLite database
+func (s *SQLite) GetLogEntries(limit int) ([]types.LogEntry, error) {
+	rows, err := s.DB.Query("SELECT id, message, type, timestamp, action, client_name FROM logs ORDER BY timestamp DESC LIMIT ?", limit)
+	if err != nil {
+		slog.Error("Failed to retrieve log entries", "error", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []types.LogEntry
+	for rows.Next() {
+		var log types.LogEntry
+		if err := rows.Scan(&log.ID, &log.Message, &log.Type, &log.Timestamp, &log.Action, &log.ClientName); err != nil {
+			slog.Error("Failed to scan log row", "error", err)
+			return nil, err
+		}
+		logs = append(logs, log)
+	}
+	return logs, nil
+}
+
+// DeleteLogEntry deletes a log entry by ID from the SQLite database
+func (s *SQLite) DeleteLogEntry(id int64) error {
+	result, err := s.DB.Prepare("DELETE FROM logs WHERE id = ?")
+	if err != nil {
+		slog.Error("Failed to prepare delete log entry statement", "error", err)
+		return err
+	}
+	_, err = result.Exec(id)
+	if err != nil {
+		slog.Error("Failed to delete log entry", "error", err)
+		return err
+	}
+	slog.Info("Log entry deleted successfully", "id", id)
+	return nil
+}
+
+// DeleteAllLogEntries deletes all log entries from the SQLite database
+func (s *SQLite) DeleteAllLogEntries() (int64, error) {
+	result, err := s.DB.Exec("DELETE FROM logs")
+	if err != nil {
+		slog.Error("Failed to delete all log entries", "error", err)
+		return 0, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		slog.Error("Failed to get rows affected", "error", err)
+		return 0, err
+	}
+	slog.Info("All log entries deleted successfully", "rows_affected", rowsAffected)
+	return rowsAffected, nil
+}
+
+//-----------------------------LOG RELATED SERVICES END-------------------------------------

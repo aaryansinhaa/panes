@@ -29,6 +29,7 @@ func MustLoadConfig() *Config {
 		flag.Parse()
 		configPath = *flags
 		if configPath == "" {
+
 			log.Fatal("Configuration file path is not set. Please set the PANES_CONIG_PATH environment variable or use the --config flag.")
 		}
 	}

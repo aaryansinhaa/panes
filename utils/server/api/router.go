@@ -5,6 +5,7 @@ import (
 
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers"
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers/file"
+	"github.com/aaryansinhaa/panes/utils/server/api/handlers/logs"
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers/mcp"
 	"github.com/aaryansinhaa/panes/utils/services/storage"
 )
@@ -14,6 +15,15 @@ func Router(s *storage.SQLite) *http.ServeMux {
 
 	//general routing
 	router.HandleFunc("GET /api", handlers.IndexHandler)
+	router.HandleFunc("GET /api/logs/{limit}", func(w http.ResponseWriter, r *http.Request) {
+		logs.ListLogHandler(w, r, s)
+	})
+	router.HandleFunc("DELETE /api/logs/delete/{id}", func(w http.ResponseWriter, r *http.Request) {
+		logs.DeleteLogEntryHandler(w, r, s)
+	})
+	router.HandleFunc("DELETE /api/logs/delete/all", func(w http.ResponseWriter, r *http.Request) {
+		logs.DeleteAllLogEntriesHandler(w, r, s)
+	})
 
 	//file based services
 	router.HandleFunc("POST /api/files/upload", func(w http.ResponseWriter, r *http.Request) {

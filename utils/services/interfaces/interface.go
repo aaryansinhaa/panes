@@ -5,7 +5,8 @@ import "github.com/aaryansinhaa/panes/utils/types"
 type LogEntry interface {
 	CreateLogEntry(message, logType, action, clientName string) error
 	GetLogEntries(limit int) ([]LogEntry, error)
-	GetLogEntryByID(id int64) (LogEntry, error)
+	DeleteLogEntry(id int64) error
+	DeleteAllLogEntries() error
 }
 
 type FileMetadata interface {

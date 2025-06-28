@@ -13,6 +13,7 @@ import (
 	"github.com/aaryansinhaa/panes/utils/config"
 	"github.com/aaryansinhaa/panes/utils/server/api"
 	"github.com/aaryansinhaa/panes/utils/services/storage"
+	"github.com/aaryansinhaa/panes/utils/types"
 )
 
 func LoadServer(cfg *config.Config) {
@@ -38,15 +39,27 @@ func LoadServer(cfg *config.Config) {
 		Addr:    fmt.Sprintf("%s:%s", cfg.HTTPServer.Address, port),
 		Handler: router,
 	}
-	// Graceful shutdown setup
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 	go func() {
 		fmt.Printf("MCP Server is running at http://%s:%s\n", cfg.HTTPServer.Address, port)
 		slog.Info("MCP Server started")
+		store.CreateLogEntry(types.LogEntry{
+			Message:    "MCP Server started",
+			Type:       "info",
+			Action:     "start",
+			ClientName: "admin",
+		},
+		)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("Server error", "error", err)
+			store.CreateLogEntry(types.LogEntry{
+				Message:    fmt.Sprintf("Server error: %v", err),
+				Type:       "error",
+				Action:     "start",
+				ClientName: "admin",
+			})
 		}
 	}()
 
