@@ -5,6 +5,7 @@ import (
 
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers"
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers/file"
+	"github.com/aaryansinhaa/panes/utils/server/api/handlers/mcp"
 )
 
 func Router() *http.ServeMux {
@@ -22,6 +23,10 @@ func Router() *http.ServeMux {
 	//permission based services
 
 	//mcp based services
+	router.HandleFunc("POST /api/mcp/register", mcp.RegisterClientHandler)
+	router.HandleFunc("GET /api/mcp/clients", mcp.ListClientsHandler)
+	router.HandleFunc("DELETE /api/mcp/clients/delete/{clientId}", mcp.DeleteClientHandler)
+	router.HandleFunc("PUT /api/mcp/clients/update/{clientId}", mcp.UpdateClientHandler)
 
 	//activity service
 

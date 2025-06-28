@@ -2,7 +2,11 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/aaryansinhaa/panes/utils/config"
 	"github.com/aaryansinhaa/panes/utils/server/api"
@@ -25,14 +29,19 @@ func LoadServer(cfg *config.Config) {
 		Addr:    fmt.Sprintf("%s:%s", cfg.HTTPServer.Address, port),
 		Handler: router,
 	}
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-	fmt.Printf("MCP Server is running at http://%s:%s\n", cfg.HTTPServer.Address, port)
+	go func() {
+		fmt.Printf("MCP Server is running at http://%s:%s\n", cfg.HTTPServer.Address, port)
+		slog.Info("MCP Server started")
+		if err := server.ListenAndServe(); err != nil {
+			fmt.Printf("Failed to start server: %v\n", err)
+			return
+		}
+		fmt.Println("Server started successfully!")
+	}()
 
-	if err := server.ListenAndServe(); err != nil {
-		fmt.Printf("Failed to start server: %v\n", err)
-		return
-	}
-
-	fmt.Println("Server started successfully!")
+	<-done
 
 }
