@@ -12,8 +12,8 @@ func main() {
 
 	// loading config
 	cfg := config.MustLoadConfig()
-	
 
+	//start the server
 	server.LoadServer(cfg)
 
 }

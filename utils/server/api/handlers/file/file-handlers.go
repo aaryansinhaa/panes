@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aaryansinhaa/panes/utils/services/storage"
+	"github.com/aaryansinhaa/panes/utils/types"
 )
 
 func sanitizeFilename(name string) string {
@@ -17,7 +20,7 @@ func sanitizeFilename(name string) string {
 }
 
 // FileUploadHandler handles file uploads
-func FileUploadHandler(w http.ResponseWriter, r *http.Request) {
+func FileUploadHandler(w http.ResponseWriter, r *http.Request, store *storage.SQLite) {
 	slog.Info("uploading File")
 
 	r.ParseMultipartForm(10 << 20) // 10 MB limit
@@ -35,7 +38,21 @@ func FileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No file was uploaded", http.StatusBadRequest)
 		return
 	}
-
+	//err = interfaces.FileMetadata.UploadFileMetadata()
+	var fileMetaData types.FileMetadata
+	fileMetaData.Filename = handler.Filename
+	fileMetaData.OriginalName = handler.Filename
+	fileMetaData.FilePath = filepath.Join("./uploads", sanitizeFilename(handler.Filename))
+	fileMetaData.MimeType = handler.Header.Get("Content-Type")
+	fileMetaData.FileSize = handler.Size
+	fileMetaData.Owner = "system" // default owner, can be changed later
+	// Save file metadata to the database
+	err = store.UploadFileMetadata(fileMetaData)
+	if err != nil {
+		slog.Error("Failed to upload file metadata", "error", err)
+		http.Error(w, "Could not save file metadata", http.StatusInternalServerError)
+		return
+	}
 	safeFilename := sanitizeFilename(handler.Filename)
 	slog.Info("uploaded file", "filename", safeFilename)
 	slog.Info("file size", "size", handler.Size)
@@ -68,34 +85,31 @@ func FileUploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListFilesHandler lists uploaded files
-func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
+func ListFilesHandler(w http.ResponseWriter, r *http.Request, s *storage.SQLite) {
 	slog.Info("listing files")
 
-	uploadDir := "./uploads"
-	files, err := os.ReadDir(uploadDir)
+	var fileList []types.FileMetadata
+	fileList, err := s.ListFileMetadata()
 	if err != nil {
-		slog.Error("Failed to read upload directory", "error", err)
-		http.Error(w, "Could not read the upload directory", http.StatusInternalServerError)
+		slog.Error("Failed to list file metadata", "error", err)
+		http.Error(w, "Could not retrieve file metadata", http.StatusInternalServerError)
 		return
 	}
-
-	var fileList []string
-	for _, file := range files {
-		if !file.IsDir() {
-			fileList = append(fileList, file.Name())
-		}
+	var fileNames []string
+	for _, file := range fileList {
+		fileNames = append(fileNames, file.Filename)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(map[string][]string{"files": fileList})
+	err = json.NewEncoder(w).Encode(map[string][]string{"files": fileNames})
 	if err != nil {
 		slog.Error("Failed to write JSON response", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
-func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
+func DeleteFileHandler(w http.ResponseWriter, r *http.Request, s *storage.SQLite) {
 	slog.Info("deleting file")
 
 	fileName := r.PathValue("filename")
@@ -104,7 +118,6 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No filename provided", http.StatusBadRequest)
 		return
 	}
-
 	safeFilename := sanitizeFilename(fileName)
 	filePath := filepath.Join("./uploads", safeFilename)
 
@@ -123,6 +136,14 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Remove file metadata from the database
+	err = s.DeleteFileMetadata(safeFilename)
+	if err != nil {
+		slog.Error("Failed to delete file metadata", "error", err)
+		http.Error(w, "Could not delete file metadata", http.StatusInternalServerError)
+		return
+	}
+
 	slog.Info("File deleted successfully", "filename", safeFilename)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -132,35 +153,28 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// search for a file
-func SearchFileHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Info("searching for file")
-
-	// Get the path variable
+// search for FileMetadata by filename
+func SearchFileHandler(w http.ResponseWriter, r *http.Request, s *storage.SQLite) {
 	fileName := r.PathValue("filename")
 	if fileName == "" {
 		slog.Error("No filename provided")
 		http.Error(w, "No filename provided", http.StatusBadRequest)
 		return
 	}
-
-	// Sanitize the filename to avoid path traversal
 	safeFilename := sanitizeFilename(fileName)
-	filePath := filepath.Join("./uploads", safeFilename)
-
-	// Check if the file exists
-	if info, err := os.Stat(filePath); os.IsNotExist(err) || info.IsDir() {
+	fileMetadata, err := s.SearchFilesByName(safeFilename, 1)
+	if err != nil {
+		slog.Error("Failed to search file metadata", "error", err)
+		http.Error(w, "Could not retrieve file metadata", http.StatusInternalServerError)
+		return
+	}
+	if len(fileMetadata) == 0 {
 		slog.Error("File not found", "filename", safeFilename)
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
-
-	// File exists
 	slog.Info("File found", "filename", safeFilename)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message":  "File found",
-		"filename": safeFilename,
-	})
+	json.NewEncoder(w).Encode(fileMetadata[0])
 }

@@ -6,19 +6,28 @@ import (
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers"
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers/file"
 	"github.com/aaryansinhaa/panes/utils/server/api/handlers/mcp"
+	"github.com/aaryansinhaa/panes/utils/services/storage"
 )
 
-func Router() *http.ServeMux {
+func Router(s *storage.SQLite) *http.ServeMux {
 	router := http.NewServeMux()
 
 	//general routing
 	router.HandleFunc("GET /api", handlers.IndexHandler)
 
 	//file based services
-	router.HandleFunc("POST /api/files/upload", file.FileUploadHandler)
-	router.HandleFunc("GET /api/files/list", file.ListFilesHandler)
-	router.HandleFunc("GET /api/files/list/{filename}", file.SearchFileHandler)
-	router.HandleFunc("DELETE /api/files/delete/{filename}", file.DeleteFileHandler)
+	router.HandleFunc("POST /api/files/upload", func(w http.ResponseWriter, r *http.Request) {
+		file.FileUploadHandler(w, r, s)
+	})
+	router.HandleFunc("GET /api/files/list", func(w http.ResponseWriter, r *http.Request) {
+		file.ListFilesHandler(w, r, s)
+	})
+	router.HandleFunc("GET /api/files/list/{filename}", func(w http.ResponseWriter, r *http.Request) {
+		file.SearchFileHandler(w, r, s)
+	})
+	router.HandleFunc("DELETE /api/files/delete/{filename}", func(w http.ResponseWriter, r *http.Request) {
+		file.DeleteFileHandler(w, r, s)
+	})
 
 	//permission based services
 

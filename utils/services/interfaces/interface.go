@@ -17,7 +17,6 @@ type Client interface {
 type FileMetadata interface {
 	UploadFileMetadata(originalName, filename, filePath, mimeType, owner string, fileSize int64) error
 	ListFileMetadata(limit int) ([]FileMetadata, error)
-	GetFileMetadataByID(id int64) (FileMetadata, error)
 	DeleteFileMetadata(id int64) error
 	SearchFilesByName(pattern string, limit int) ([]FileMetadata, error)
 }

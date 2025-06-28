@@ -25,13 +25,6 @@ func LoadServer(cfg *config.Config) {
 
 	fmt.Printf("Starting server on port %s...\n", port)
 
-	router := api.Router()
-
-	server := &http.Server{
-		Addr:    fmt.Sprintf("%s:%s", cfg.HTTPServer.Address, port),
-		Handler: router,
-	}
-
 	// Connect to SQLite database
 	store, err := storage.LoadSQLiteStorage(cfg)
 	if err != nil {
@@ -39,7 +32,12 @@ func LoadServer(cfg *config.Config) {
 		return
 	}
 	defer store.Close()
+	router := api.Router(store)
 
+	server := &http.Server{
+		Addr:    fmt.Sprintf("%s:%s", cfg.HTTPServer.Address, port),
+		Handler: router,
+	}
 	// Graceful shutdown setup
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
