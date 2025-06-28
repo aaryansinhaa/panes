@@ -1,9 +1,18 @@
 package interfaces
 
+import "github.com/aaryansinhaa/panes/utils/types"
+
 type LogEntry interface {
 	CreateLogEntry(message, logType, action, clientName string) error
 	GetLogEntries(limit int) ([]LogEntry, error)
 	GetLogEntryByID(id int64) (LogEntry, error)
+}
+
+type FileMetadata interface {
+	UploadFileMetadata(fileMetaData types.FileMetadata) error
+	ListFileMetadata() ([]types.FileMetadata, error)
+	DeleteFileMetadata(filename string) error
+	SearchFilesByName(pattern string, limit int) ([]types.FileMetadata, error)
 }
 
 type Client interface {
@@ -12,13 +21,6 @@ type Client interface {
 	GetClientByID(clientID string) (Client, error)
 	UpdateClient(clientID string, clientName string, clientAPIHash string) error
 	DeleteClient(clientID string) error
-}
-
-type FileMetadata interface {
-	UploadFileMetadata(originalName, filename, filePath, mimeType, owner string, fileSize int64) error
-	ListFileMetadata(limit int) ([]FileMetadata, error)
-	DeleteFileMetadata(id int64) error
-	SearchFilesByName(pattern string, limit int) ([]FileMetadata, error)
 }
 
 type Permission interface {
