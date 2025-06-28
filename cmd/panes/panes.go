@@ -10,7 +10,9 @@ import (
 func main() {
 	fmt.Println("Hello, from Panes!")
 
+	// loading config
 	cfg := config.MustLoadConfig()
+	
 
 	server.LoadServer(cfg)
 

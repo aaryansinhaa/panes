@@ -64,7 +64,7 @@ func FileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("File uploaded successfully", "filename", safeFilename)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "File uploaded and saved successfully"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "File uploaded and saved successfully", "filename": safeFilename})
 }
 
 // ListFilesHandler lists uploaded files
