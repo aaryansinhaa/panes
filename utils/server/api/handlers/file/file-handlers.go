@@ -95,7 +95,6 @@ func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// delete a file
 func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("deleting file")
 
@@ -109,6 +108,14 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 	safeFilename := sanitizeFilename(fileName)
 	filePath := filepath.Join("./uploads", safeFilename)
 
+	// Check if file exists before deleting
+	if info, err := os.Stat(filePath); os.IsNotExist(err) || info.IsDir() {
+		slog.Error("File not found or is a directory", "filename", safeFilename)
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	// Try to delete the file
 	err := os.Remove(filePath)
 	if err != nil {
 		slog.Error("Failed to delete file", "error", err)
@@ -117,8 +124,12 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("File deleted successfully", "filename", safeFilename)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "File deleted successfully"})
+	json.NewEncoder(w).Encode(map[string]string{
+		"message":  "File deleted successfully",
+		"filename": safeFilename,
+	})
 }
 
 // search for a file
