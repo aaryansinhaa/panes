@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aaryansinhaa/panes/utils/config"
+	"github.com/aaryansinhaa/panes/utils/mcp"
 	"github.com/aaryansinhaa/panes/utils/server"
 )
 
@@ -13,6 +14,7 @@ func main() {
 	// loading config
 	cfg := config.MustLoadConfig()
 
+	mcp.Server()
 	//start the server
 	server.LoadServer(cfg)
 
